@@ -278,80 +278,126 @@ bool loadFileHumanData (string &filename, Vector &hip_pitch, Vector &hip_roll,
 bool startingPointHumanData (Vector &hip_pitch, Vector &hip_roll, Vector &knee, Vector &ankle_pitch, 
 							Vector &shoulder_pitch, Vector &shoulder_roll, Vector &shoulder_yaw, 
 							Vector &elbow, Vector &torso_pitch,
-							Matrix &q_RA, Matrix &q_LA, Matrix &T, Matrix &q_RL, Matrix &q_LL)
+							Vector &q_RA, Vector &q_LA, Vector &q_T, Vector &q_RL, Vector &q_LL)
 {
 	int nbIter = hip_pitch.size();
 	
-	// resizing matrix to get the correct values of the trajectories
-	q_RA.resize(nbIter,nJointsArm); q_RA.zero();
-	q_LA.resize(nbIter,nJointsArm); q_LA.zero();
-	q_T.resize(nbIter,nJointsTorso); q_T.zero();
-	q_RL.resize(nbIter,nJointsArm); q_RL.zero();
-	q_LL.resize(nbIter,nJointsArm); q_LL.zero();
-	
-	for (int c=0; c<nbIter; c++)
-	{
-		
-		
-	}	
-	
-	// resizing matrix to get the correct values of the trajectories
-	hip_pitch.resize(nbIter); 
-	hip_roll.resize(nbIter); 
-	knee.resize(nbIter); 
-	ankle_pitch.resize(nbIter); 
-	shoulder_pitch.resize(nbIter); 
-	shoulder_roll.resize(nbIter); 
-	shoulder_yaw.resize(nbIter); 
-	elbow.resize(nbIter); 
-	torso_pitch.resize(nbIter);
-	
-	hip_pitch.zero(); 
-	hip_roll.zero();
-	knee.zero(); 
-	ankle_pitch.zero(); 
-	shoulder_pitch.zero();
-	shoulder_roll.zero();
-	shoulder_yaw.zero(); 
-	elbow.zero(); 
-	torso_pitch.zero();
-	
-	double counterToIgnore;
-
-	// reading the trajectory from the file
-	for (int c=0; c<nbIter; c++)
-	{
-		printf ("Load file %s : \r%d / %d", filename.c_str (), c + 1, nbIter);
-		getline (inputFile, l);
-		stringstream line;
-		line << l;
-			
-		line>>counterToIgnore;
-		
-		// Frame,0-HipPitch,1-HipRoll,3-Knee,4-AnklePitch,0-ShoulderPitch,1-ShoulderRoll,2-ShoulderYaw,3-Elbow,2-TorsoPitch
-		line >> hip_pitch[c];	
-		line >> hip_roll[c];
-		line >> knee[c];
-		line >> ankle_pitch[c];
-		line >> shoulder_pitch[c];
-		line >> shoulder_roll[c];
-		line >> shoulder_yaw[c];
-		line >> elbow[c];
-		line >> torso_pitch[c];
-
-	}
-	
-	cout<<"File is read! "<<endl;
+    if(hip_pitch.size()<1)
+    {
+        cout<<"Apparently there is no loaded trajectory... keeping the current point"<<endl;
+        return false;
+    }
+    
+    //taking the first element of each trajectory
+    
+    //torso
+    // "torso_yaw" "torso_roll" "torso_pitch"
+    q_T[2]=torso_pitch[0];
+    
+    //arms
+    // "l_shoulder_pitch" "l_shoulder_roll" "l_shoulder_yaw" "l_elbow"
+    q_RA[0]=shoulder_pitch[0];
+    q_RA[1]=shoulder_roll[0];
+    q_RA[2]=shoulder_yaw[0];
+    q_RA[3]=elbow[0];
+    q_LA[0]=shoulder_pitch[0];
+    q_LA[1]=shoulder_roll[0];
+    q_LA[2]=shoulder_yaw[0];
+    q_LA[3]=elbow[0];
+    
+    //legs
+    // "r_hip_pitch"   "r_hip_roll"    "r_hip_yaw"   "r_knee"  "r_ankle_pitch"  "r_ankle_roll"
+    q_LL[0]=hip_pitch[0];
+    q_LL[1]=hip_roll[0];
+    q_LL[3]=knee[0];
+    q_LL[4]=ankle_pitch[0];
+    
 	return true;
 
 }
 
+bool loadHumanDataOnRobotTrajectory(Vector &hip_pitch, Vector &hip_roll, Vector &knee, Vector &ankle_pitch,
+                                    Vector &shoulder_pitch, Vector &shoulder_roll, Vector &shoulder_yaw,
+                                    Vector &elbow, Vector &torso_pitch,
+                                    Vector &q_RA, Vector &q_LA, Vector &q_T, Vector &q_RL, Vector &q_LL,
+                                    Matrix &traj_RA, Matrix &traj_LA, Matrix &traj_T, Matrix &traj_RL, Matrix &traj_LL)
+{
+
+    int nbIter = hip_pitch.size();
+    
+    if(hip_pitch.size()<1)
+    {
+        cout<<"Apparently there is no loaded trajectory... keeping the current point"<<endl;
+        return false;
+    }
+
+    // resizing matrix to get the correct values of the trajectories
+    traj_RA.resize(nbIter,nJointsArm); traj_RA.zero();
+    traj_LA.resize(nbIter,nJointsArm); traj_LA.zero();
+    traj_T.resize(nbIter,nJointsTorso); traj_T.zero();
+    traj_RL.resize(nbIter,nJointsLegs); traj_RL.zero();
+    traj_LL.resize(nbIter,nJointsLegs); traj_LL.zero();
+    
+    // reading the trajectory from the file
+    for (int c=0; c<nbIter; c++)
+    {
+        //first copy the encoders
+        for(int j=0; j<nJointsArm; j++)
+        {
+            traj_RA[c][j]=q_RA[j];
+            traj_LA[c][j]=q_LA[j];
+        }
+        for(int j=0; j<nJointsTorso; j++)
+        {
+            traj_T[c][j]=q_T[j];
+        }
+        for(int j=0; j<nJointsLegs; j++)
+        {
+            traj_RL[c][j]=q_RL[j];
+            traj_LL[c][j]=q_LL[j];
+        }
+        
+        //then change the joints from the human data
+        
+        //torso
+        // "torso_yaw" "torso_roll" "torso_pitch"
+        traj_T[c][2]=torso_pitch[c];
+        
+        //arms
+        // "l_shoulder_pitch" "l_shoulder_roll" "l_shoulder_yaw" "l_elbow"
+        traj_RA[c][0]=shoulder_pitch[c];
+        traj_RA[c][1]=shoulder_roll[c];
+        traj_RA[c][2]=shoulder_yaw[c];
+        traj_RA[c][3]=elbow[c];
+        traj_LA[c][0]=shoulder_pitch[c];
+        traj_LA[c][1]=shoulder_roll[c];
+        traj_LA[c][2]=shoulder_yaw[c];
+        traj_LA[c][3]=elbow[c];
+        
+        //legs
+        // "r_hip_pitch"   "r_hip_roll"    "r_hip_yaw"   "r_knee"  "r_ankle_pitch"  "r_ankle_roll"
+        traj_LL[c][0]=hip_pitch[c];
+        traj_LL[c][1]=hip_roll[c];
+        traj_LL[c][3]=knee[c];
+        traj_LL[c][4]=ankle_pitch[c];
+        traj_RL[c][0]=hip_pitch[c];
+        traj_RL[c][1]=hip_roll[c];
+        traj_RL[c][3]=knee[c];
+        traj_RL[c][4]=ankle_pitch[c];
+        
+    }
+    
+    return true;
+
+
+}
+                                    
 
 
 //---------------------------------------------------------
 // check the safety of a trajectory (within the joint limits)
 //---------------------------------------------------------
-int safety_check(Vector &command_RA, Vector &command_LA, Vector &command_T)
+int safety_check_upperbody(Vector &command_RA, Vector &command_LA, Vector &command_T)
 {
 	int violations=0;
 	
@@ -404,7 +450,7 @@ int safety_check(Vector &command_RA, Vector &command_LA, Vector &command_T)
 	return violations;
 }
 
-int safety_check(Vector &command_RA, Vector &command_LA, Vector &command_T, Vector &command_RA, Vector &command_LA)
+int safety_check(Vector &command_RA, Vector &command_LA, Vector &command_T, Vector &command_RL, Vector &command_LL)
 {
 	int violations=0;
 	
@@ -479,8 +525,8 @@ int safety_check(Vector &command_RA, Vector &command_LA, Vector &command_T, Vect
 		if(command_RL[i]>max_RL[i]) {  command_RL[i]=max_RL[i];	cout<<"#### max RIGHT_LEG "<<i<<endl; violations++;}
 		if(command_RL[i]<min_RL[i]) {  command_RL[i]=min_RL[i];	cout<<"#### min RIGHT_LEG "<<i<<endl; violations++;}
 	
-		if(command_LA[i]>max_LA[i]) {  command_LL[i]=max_LL[i];	cout<<"#### max LEFT_LEG "<<i<<endl; violations++;}
-		if(command_LA[i]<min_LA[i]) {  command_LL[i]=min_LL[i];	cout<<"#### min LEFT_LEG "<<i<<endl; violations++;}
+		if(command_LL[i]>max_LL[i]) {  command_LL[i]=max_LL[i];	cout<<"#### max LEFT_LEG "<<i<<endl; violations++;}
+		if(command_LL[i]<min_LL[i]) {  command_LL[i]=min_LL[i];	cout<<"#### min LEFT_LEG "<<i<<endl; violations++;}
 	
 	}
 
@@ -504,6 +550,10 @@ int main(int argc, char *argv[])
     
     int jointLimitsViolations=0;
     int totalJointsLimitsViolations=0;
+    
+    // trajectories for the joints from human data
+    Vector hip_pitch, hip_roll, knee, ankle_pitch, shoulder_pitch, shoulder_roll, shoulder_yaw, elbow, torso_pitch;
+    Matrix q_RA, q_LA, q_T, q_RL, q_LL;
     
     //--------------- CONFIG  --------------
     
@@ -580,8 +630,6 @@ int main(int argc, char *argv[])
 	}
     
     //--------------- READING TRAJECTORY  --------------
-	// trajectories for the joints from human data
-	Vector hip_pitch, hip_roll, knee, ankle_pitch, shoulder_pitch, shoulder_roll, shoulder_yaw, elbow, torso_pitch;
 
 	if(!loadFileHumanData(fileName, hip_pitch, hip_roll, knee, ankle_pitch, shoulder_pitch, shoulder_roll, shoulder_yaw, elbow, torso_pitch))
 	{
@@ -597,7 +645,7 @@ int main(int argc, char *argv[])
     
 	//--------------- OPENING DRIVERS  --------------
 	
-	// left arm, right arm, torso
+	// left arm and leg, right arm and leg, torso
 	Property options_LA, options_RA, options_T, options_RL, options_LL;
 	PolyDriver *dd_LA, *dd_RA, *dd_T, *dd_RL, *dd_LL;	
 	IPositionControl *pos_LA, *pos_RA, *pos_T, *pos_RL, *pos_LL;
@@ -806,14 +854,23 @@ int main(int argc, char *argv[])
     command_LA=encoders_LA;
     command_T=encoders_T;
     command_RL=encoders_RL;
-    command_L=encoders_LL;
+    command_LL=encoders_LL;
     
     //now set the limbs to the starting point level
-    for(i=0; i<nJointsArm; i++) command_RA[i] = q_RA[startingPoint][i];
-    for(i=0; i<nJointsArm; i++) command_LA[i] = q_LA[startingPoint][i];
-    for(i=0; i<nJointsTorso; i++) command_T[i] = q_T[startingPoint][i];
+    // - only the joints from the human data are changed, the others are fixed
+    startingPointHumanData(hip_pitch, hip_roll, knee, ankle_pitch,
+                           shoulder_pitch, shoulder_roll, shoulder_yaw,
+                           elbow, torso_pitch,
+                           command_RA,command_LA, command_T, command_RL, command_LL);
     
-    jointLimitsViolations = safety_check(command_RA, command_LA, command_T);
+    //also load the trajectory
+    loadHumanDataOnRobotTrajectory(hip_pitch, hip_roll, knee, ankle_pitch,
+                                   shoulder_pitch, shoulder_roll, shoulder_yaw,
+                                   elbow, torso_pitch,
+                                   encoders_RA, encoders_LA, encoders_T, encoders_RL, encoders_LL,
+                                   q_RA, q_LA, q_T, q_RL, q_LL);
+    
+    jointLimitsViolations = safety_check(command_RA, command_LA, command_T, command_RA, command_LA);
     
     if(jointLimitsViolations==0)
 		cout<<" *** FEASIBLE STARTING POSITION *** "<<endl;
@@ -861,19 +918,18 @@ int main(int argc, char *argv[])
 		ictrl_RL->setControlMode(j,VOCAB_CM_POSITION);
 	}
 		
-    cout<<" Moving torso "<<endl;
-    pos_T->positionMove(command_T.data());
-    Time::delay(1.0);
-    cout<<" Moving right arm "<<endl;
-    pos_RA->positionMove(command_RA.data());
-    Time::delay(1.0);
-    cout<<" Moving left arm "<<endl;
-    pos_LA->positionMove(command_LA.data());
-    Time::delay(1.0);
     cout<<" Moving right and left leg "<<endl;
     pos_RL->positionMove(command_RL.data());
     pos_LL->positionMove(command_LL.data());
     Time::delay(1.0);
+    cout<<" Moving torso "<<endl;
+    pos_T->positionMove(command_T.data());
+    Time::delay(1.0);
+    cout<<" Moving right and left arm "<<endl;
+    pos_RA->positionMove(command_RA.data());
+    pos_LA->positionMove(command_LA.data());
+    Time::delay(1.0);
+    
     
     cout<<" Starting movement ? (y/n) ";
 	cin >> chinput; 
@@ -981,11 +1037,13 @@ int main(int argc, char *argv[])
 	
 	for(int t=startingPoint; t<nbIter; t+=1)
 	{
-		for(i=0; i<nJointsArm; i++) command_RA[i] = q_RA[t][i];
-		for(i=0; i<nJointsArm; i++) command_LA[i] = q_LA[t][i];
+		for(i=0; i<nJointsArm; i++)   command_RA[i] = q_RA[t][i];
+		for(i=0; i<nJointsArm; i++)   command_LA[i] = q_LA[t][i];
 		for(i=0; i<nJointsTorso; i++) command_T[i] = q_T[t][i];
+        for(i=0; i<nJointsLegs; i++)  command_RL[i] = q_RL[t][i];
+        for(i=0; i<nJointsLegs; i++)  command_LL[i] = q_LL[t][i];
 		
-		jointLimitsViolations = safety_check(command_RA, command_LA, command_T);
+		jointLimitsViolations = safety_check(command_RA, command_LA, command_T, command_RL, command_LL);
 		totalJointsLimitsViolations += jointLimitsViolations;
 		
 		if(verbosity>=1)   printf ("Moving : \r%d / %d  - violating %d", t, nbIter, jointLimitsViolations);
@@ -1030,6 +1088,8 @@ int main(int argc, char *argv[])
 	if(dd_RA) {delete dd_RA; dd_RA=0; }
 	if(dd_LA) {delete dd_LA; dd_LA=0; }
 	if(dd_T) {delete dd_T; dd_T=0;}
+    if(dd_RL) {delete dd_RL; dd_RL=0; }
+    if(dd_LL) {delete dd_LL; dd_LL=0; }
 
 	return 0;
 }
