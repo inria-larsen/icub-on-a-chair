@@ -39,6 +39,7 @@ int nJointsTorso=3;
 int nJointsLegs=6;
 int nbIter;
 
+
 //---------------------------------------------------------
 // open drivers with compliance (real robot)
 //---------------------------------------------------------
@@ -297,20 +298,24 @@ bool startingPointHumanData (Vector &hip_pitch, Vector &hip_roll, Vector &knee, 
     //arms
     // "l_shoulder_pitch" "l_shoulder_roll" "l_shoulder_yaw" "l_elbow"
     q_RA[0]=shoulder_pitch[0];
-    q_RA[1]=shoulder_roll[0];
-    q_RA[2]=shoulder_yaw[0];
+    //q_RA[1]=shoulder_roll[0];
+    //q_RA[2]=shoulder_yaw[0];
     q_RA[3]=elbow[0];
     q_LA[0]=shoulder_pitch[0];
-    q_LA[1]=shoulder_roll[0];
-    q_LA[2]=shoulder_yaw[0];
+    //q_LA[1]=shoulder_roll[0];
+    //q_LA[2]=shoulder_yaw[0];
     q_LA[3]=elbow[0];
     
     //legs
     // "r_hip_pitch"   "r_hip_roll"    "r_hip_yaw"   "r_knee"  "r_ankle_pitch"  "r_ankle_roll"
     q_LL[0]=hip_pitch[0];
-    q_LL[1]=hip_roll[0];
+    //q_LL[1]=hip_roll[0];
     q_LL[3]=knee[0];
     q_LL[4]=ankle_pitch[0];
+    q_RL[0]=hip_pitch[0];
+    //q_RL[1]=hip_roll[0];
+    q_RL[3]=knee[0];
+    q_RL[4]=ankle_pitch[0];
     
 	return true;
 
@@ -366,22 +371,22 @@ bool loadHumanDataOnRobotTrajectory(Vector &hip_pitch, Vector &hip_roll, Vector 
         //arms
         // "l_shoulder_pitch" "l_shoulder_roll" "l_shoulder_yaw" "l_elbow"
         traj_RA[c][0]=shoulder_pitch[c];
-        traj_RA[c][1]=shoulder_roll[c];
-        traj_RA[c][2]=shoulder_yaw[c];
+        //traj_RA[c][1]=shoulder_roll[c];
+        //traj_RA[c][2]=shoulder_yaw[c];
         traj_RA[c][3]=elbow[c];
         traj_LA[c][0]=shoulder_pitch[c];
-        traj_LA[c][1]=shoulder_roll[c];
-        traj_LA[c][2]=shoulder_yaw[c];
+        //traj_LA[c][1]=shoulder_roll[c];
+        //traj_LA[c][2]=shoulder_yaw[c];
         traj_LA[c][3]=elbow[c];
         
         //legs
         // "r_hip_pitch"   "r_hip_roll"    "r_hip_yaw"   "r_knee"  "r_ankle_pitch"  "r_ankle_roll"
         traj_LL[c][0]=hip_pitch[c];
-        traj_LL[c][1]=hip_roll[c];
+        //traj_LL[c][1]=hip_roll[c];
         traj_LL[c][3]=knee[c];
         traj_LL[c][4]=ankle_pitch[c];
         traj_RL[c][0]=hip_pitch[c];
-        traj_RL[c][1]=hip_roll[c];
+        //traj_RL[c][1]=hip_roll[c];
         traj_RL[c][3]=knee[c];
         traj_RL[c][4]=ankle_pitch[c];
         
@@ -563,15 +568,15 @@ int main(int argc, char *argv[])
     if (params.check("help"))
     {
         cout<<"This module plays a given joints trajectory for the upper body, the trajectory being stored on a file."<<endl
-			<<" Usage:   upperBodyPlayer --robot ROBOTNAME --file FILENAME --verbosity LEVEL --start STARTPOINT"<<endl
-			<<" Default values: robot=icubSim  file=ugo_trajectory.txt verbosity=2 startpoint=0"<<endl;
+			<<" Usage:   bodyPlayer --robot ROBOTNAME --file FILENAME --verbosity LEVEL --start STARTPOINT"<<endl
+			<<" Default values: robot=icubGazeboSim  file=jointAngles_noheader.txt verbosity=2 startpoint=0"<<endl;
         return 1;
     }
 
     if (!params.check("robot"))
     {
         cout<<"==> Missing robot name, setting default"<<endl;
-        robotName="icubSim";
+        robotName="icubGazeboSim";
     }
     else
     {
@@ -581,7 +586,7 @@ int main(int argc, char *argv[])
      if (!params.check("file"))
     {
         cout<<"==> Missing file name, setting default"<<endl;
-        fileName="trajectory.txt";
+        fileName="jointAngles_noheader.txt";
     } 
     else
     {
@@ -788,8 +793,8 @@ int main(int argc, char *argv[])
     pos_RA->setRefAccelerations(command_RA.data());
     pos_LA->setRefAccelerations(command_LA.data());
     pos_T->setRefAccelerations(command_T.data());
-    pos_RA->setRefAccelerations(command_RL.data());
-    pos_LA->setRefAccelerations(command_LL.data());
+    pos_RL->setRefAccelerations(command_RL.data());
+    pos_LL->setRefAccelerations(command_LL.data());
 
 	// setting velocities
     for (i = 0; i < nj_arms; i++) 
@@ -918,17 +923,18 @@ int main(int argc, char *argv[])
 		ictrl_RL->setControlMode(j,VOCAB_CM_POSITION);
 	}
 		
+	cout<<" Moving right and left arm "<<endl;
+    pos_RA->positionMove(command_RA.data());
+    pos_LA->positionMove(command_LA.data());
+    Time::delay(3.0);
     cout<<" Moving right and left leg "<<endl;
     pos_RL->positionMove(command_RL.data());
     pos_LL->positionMove(command_LL.data());
-    Time::delay(1.0);
+    Time::delay(0.2);
     cout<<" Moving torso "<<endl;
     pos_T->positionMove(command_T.data());
-    Time::delay(1.0);
-    cout<<" Moving right and left arm "<<endl;
-    pos_RA->positionMove(command_RA.data());
-    pos_LA->positionMove(command_LA.data());
-    Time::delay(1.0);
+    Time::delay(3.0);
+
     
     
     cout<<" Starting movement ? (y/n) ";
